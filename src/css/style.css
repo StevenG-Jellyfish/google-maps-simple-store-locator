@@ -84,7 +84,7 @@ body {
         height: 64px;
         margin-top: 15px;
     }
-    .retai-finder {
+    .retail-finder {
         display: flex;
         flex-direction: row;
         flex-wrap: nowrap;
@@ -93,7 +93,7 @@ body {
         align-content: flex-start;
         margin: 8px;
     }
-    .retai-finder input {
+    .retail-finder input {
         flex-grow: 1;
         flex-shrink: 1;
         width: 45%;
@@ -102,12 +102,44 @@ body {
         font-size: 28px;
         outline: 0px;
     }
-    .retai-finder button {
+    .retail-finder button {
         flex-grow: 2;
         flex-shrink: 2;
+        position: relative;
         width: 55%;
         margin-left: 8px;
         padding: 4px 8px;
         line-height: 36px;
         font-size: 24px;
+        border: 0px;
+        background-color: FireBrick;  
+        color: white;
+        z-index: 0;
+        overflow: hidden;
+        outline: 0px;
+    }
+    .retail-finder button:hover {
+        background-color: OliveDrab;  
+        cursor: pointer;
+    }
+    .retail-finder button::after {
+        content: '';
+        position: absolute;
+        top: 0px;
+        right: 0px;
+        width: 0px;
+        height: 0px;
+        margin-left: 8px;
+        padding: 4px 8px;
+        line-height: 36px;
+        font-size: 24px;
+        border: 0px; 
+        border-top: 44px solid transparent;
+        border-right: 24px solid DarkRed;
+        color: white;
+        z-index: 1;
+        outline: 0px solid yellow;
+    }
+    .retail-finder button:hover::after {
+        border-right: 24px solid DarkSeaGreen;
     }
