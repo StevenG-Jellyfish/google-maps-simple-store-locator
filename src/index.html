@@ -16,17 +16,50 @@
 <html>
 <head>
   <title>Store Locator</title>
-  <style>
-    .map {height: 100%;}
-    html, body {height: 100%; margin: 0; padding: 0;}
-  </style>
+  <link rel="stylesheet" type="text/css" href="css/style.css">
 <head>
 <body>
+    
   <div class="map"></div>
+  
+
+  <div class="list-container">
+    <form class="retai-finder">
+      <input type="text" placeholder="Postal Code">
+      <button>Find Retailer</button>
+    </form>
+    <ul class="retailer-list">
+      <li class="retialer-item">
+          <img src="img/icon_fmc.png">
+          <div class="list-card-content">
+            <h2>Josie's Patisserie</h2><p>Come and try our award-winning cakes and pastries. We're part of a larger chain of patisseries and cafes.</p>
+            <p><b>Open:</b> 10am - 6pm<br/><b>Phone:</b> +44 117 121 2121</p>
+            <p><img src="https://maps.googleapis.com/maps/api/streetview?size=350x120&location=-0.145365,51.506182&key=AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE"></p>
+          </div>
+      </li>
+      <li class="retialer-item">
+          <img src="img/icon_fmc.png">
+          <div class="list-card-content">
+            <h2>Josie's Patisserie</h2><p>Come and try our award-winning cakes and pastries. We're part of a larger chain of patisseries and cafes.</p>
+            <p><b>Open:</b> 10am - 6pm<br/><b>Phone:</b> +44 117 121 2121</p>
+            <p><img src="https://maps.googleapis.com/maps/api/streetview?size=350x120&location=-0.145365,51.506182&key=AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE"></p>
+          </div>
+      </li>
+      <li class="retialer-item">
+          <img src="img/icon_fmc.png">
+          <div class="list-card-content">
+            <h2>Josie's Patisserie</h2><p>Come and try our award-winning cakes and pastries. We're part of a larger chain of patisseries and cafes.</p>
+            <p><b>Open:</b> 10am - 6pm<br/><b>Phone:</b> +44 117 121 2121</p>
+            <p><img src="https://maps.googleapis.com/maps/api/streetview?size=350x120&location=-0.145365,51.506182&key=AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE"></p>
+          </div>
+      </li>
+    </ul>
+  </div>
 
   <script src="app.js"></script>
   <script async defer
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE&callback=initMap">
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE&callback=initMap"
+  >
   </script>
 </body>
 </html>
