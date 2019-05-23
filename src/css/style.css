@@ -3,16 +3,30 @@ body {
     height: 100%;
     margin: 0;
     padding: 0;
+}
+.poc-content {
+    align-self: flex-end;
+    flex-grow: 3;
+    flex-shrink: 3;
+    margin: 15px;
+    padding: 15px;
+    border-bottom: 1px solid #ccc;
+}
+.container {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     justify-content: flex-start;
     align-items: flex-start;
     align-content: flex-start;
+    position: relative;
+    height: 100%;
+    background-color: #eeeeee;
 }
 
 .map {
     display: block;
+    position: relative;
     height: 100%;
     min-width: 66%;
     flex-grow: 2;
@@ -32,9 +46,19 @@ body {
 .list-container {
     flex-grow: 1;
     flex-shrink: 1;
+    position: relative;
+    height: 100%;
+    background-color: #eeeeee;
+    overflow: hidden;
     /* outline: 1px solid red; */
 
 }    
+    .retailer-list {
+        position: relative;
+        height: 100%;
+        padding-bottom: 50px;
+        overflow: scroll;
+    }
     .retialer-item {
         display: flex;
         flex-direction: row;
@@ -48,6 +72,7 @@ body {
     }
     .retialer-item:last-child {
         border-bottom: 0px solid #ccc;
+        margin-bottom: 100px;
     }
     .list-card-content {
     }
