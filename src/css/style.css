@@ -1,145 +1,272 @@
 body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 .poc-content {
-    align-self: flex-end;
-    flex-grow: 3;
-    flex-shrink: 3;
-    margin: 15px;
-    padding: 15px;
-    border-bottom: 1px solid #ccc;
+  align-self: flex-end;
+  flex-grow: 3;
+  flex-shrink: 3;
+  margin: 15px;
+  padding: 15px;
+  border-bottom: 1px solid #ccc;
 }
 .container {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    align-items: flex-start;
-    align-content: flex-start;
-    position: relative;
-    width: auto;
-    height: 100%;
-    padding: 20px;
-    background-color: #efefef;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  align-content: flex-start;
+  position: relative;
+  width: auto;
+  height: 100%;
+  padding: 20px;
+  background-color: #efefef;
 }
 
 .map {
-    display: block;
-    position: relative;
-    height: 100%;
-    min-width: 66%;
-    flex-grow: 2;
-    flex-shrink: 0;
-    /* outline: 1px solid blue; */
+  display: block;
+  position: relative;
+  height: 100%;
+  min-width: 66%;
+  flex-grow: 2;
+  flex-shrink: 0;
+  /* outline: 1px solid blue; */
 }
-    .gm-style-iw img {
-        float: left; 
-        width: 200px; 
-        margin-top: 30px;
-    }
-    .pin-card-content {
-        margin-left: 220px; 
-        margin-bottom: 20px;
-    }
+.gm-style-iw img {
+  float: left;
+  width: 200px;
+  margin-top: 30px;
+}
+.pin-card-content {
+  margin-left: 220px;
+  margin-bottom: 20px;
+}
 
 .list-container {
-    flex-grow: 1;
-    flex-shrink: 1;
-    position: relative;
-    height: 100%;
-    background-color: #ddd;
-    overflow: hidden;
-    /* outline: 1px solid red; */
+  flex-grow: 1;
+  flex-shrink: 1;
+  position: relative;
+  height: 100%;
+  background-color: #ddd;
+  overflow: hidden;
+  /* outline: 1px solid red; */
+}
+.retailer-list {
+  position: relative;
+  height: 100%;
+  padding-bottom: 50px;
+  overflow: scroll;
+}
+.retialer-item {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  align-content: flex-start;
+  margin: 15px 0 0 0;
+  padding: 0 0 15px 0;
+  border-bottom: 1px solid #ccc;
+}
+.retialer-item:last-child {
+  border-bottom: 0px solid #ccc;
+  margin-bottom: 100px;
+ }
+/* .list-card-content { 
+} */
+.retialer-item img {
+  display: inline-block;
+  width: 64px;
+  height: 64px;
+  margin-top: 15px;
+}
+.retail-finder {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  align-content: flex-start;
+  margin: 8px;
+}
+.retail-finder input {
+  flex-grow: 1;
+  flex-shrink: 1;
+  width: 45%;
+  padding: 4px 8px;
+  line-height: 36px;
+  font-size: 28px;
+  outline: 0px;
+}
+.retail-finder button {
+  flex-grow: 2;
+  flex-shrink: 2;
+  position: relative;
+  width: 55%;
+  margin-left: 8px;
+  padding: 4px 8px;
+  line-height: 36px;
+  font-size: 18px;
+  border: 0px;
+  background-color: FireBrick;
+  color: white;
+  z-index: 0;
+  overflow: hidden;
+  outline: 0px;
+}
+.retail-finder button:hover {
+  background-color: OliveDrab;
+  cursor: pointer;
+}
+.retail-finder button::after {
+  content: "";
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 0px;
+  height: 0px;
+  margin-left: 8px;
+  padding: 4px 8px;
+  line-height: 36px;
+  font-size: 24px;
+  border: 0px;
+  border-top: 44px solid transparent;
+  border-right: 24px solid DarkRed;
+  color: white;
+  z-index: 1;
+  outline: 0px solid yellow;
+}
+.retail-finder button:hover::after {
+  border-right: 24px solid DarkSeaGreen;
+}
+.retail-finder button span.icon-circle-arrow {
+  display: inline-block;
+  position: absolute;
+  width: 20px;
+  height: 0;
+  margin: 6px 0 0 12px;
+  padding-bottom: 20px;
+  -moz-border-radius: 50%;
+  -webkit-border-radius: 50%;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid white;
+  z-index: 4;
+}
+.retail-finder button span.icon-circle-arrow:before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -5px 0 0 -2px;
+  border-top: solid 5px transparent;
+  border-left: solid 5px #fff;
+  border-bottom: solid 5px transparent;
+  z-index: 4;
+}
 
-}    
-    .retailer-list {
-        position: relative;
-        height: 100%;
-        padding-bottom: 50px;
-        overflow: scroll;
-    }
-    .retialer-item {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-        align-items: flex-start;
-        align-content: flex-start;
-        margin: 15px 0 0 0;
-        padding: 0 0 15px 0;
-        border-bottom: 1px solid #ccc;
-    }
-    .retialer-item:last-child {
-        border-bottom: 0px solid #ccc;
-        margin-bottom: 100px;
-    }
-    .list-card-content {
-    }
-    .retialer-item img {
-        display: inline-block;
-        width: 64px;
-        height: 64px;
-        margin-top: 15px;
-    }
-    .retail-finder {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-        align-items: flex-start;
-        align-content: flex-start;
-        margin: 8px;
-    }
-    .retail-finder input {
-        flex-grow: 1;
-        flex-shrink: 1;
-        width: 45%;
-        padding: 4px 8px;
-        line-height: 36px;
-        font-size: 28px;
-        outline: 0px;
-    }
-    .retail-finder button {
-        flex-grow: 2;
-        flex-shrink: 2;
-        position: relative;
-        width: 55%;
-        margin-left: 8px;
-        padding: 4px 8px;
-        line-height: 36px;
-        font-size: 24px;
-        border: 0px;
-        background-color: FireBrick;  
-        color: white;
-        z-index: 0;
-        overflow: hidden;
-        outline: 0px;
-    }
-    .retail-finder button:hover {
-        background-color: OliveDrab;  
-        cursor: pointer;
-    }
-    .retail-finder button::after {
-        content: '';
-        position: absolute;
-        top: 0px;
-        right: 0px;
-        width: 0px;
-        height: 0px;
-        margin-left: 8px;
-        padding: 4px 8px;
-        line-height: 36px;
-        font-size: 24px;
-        border: 0px; 
-        border-top: 44px solid transparent;
-        border-right: 24px solid DarkRed;
-        color: white;
-        z-index: 1;
-        outline: 0px solid yellow;
-    }
-    .retail-finder button:hover::after {
-        border-right: 24px solid DarkSeaGreen;
-    }
+/* Styling for autocomplete search bar */
+#pac-card {
+  background-color: #fff;
+  border-radius: 2px 0 0 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  font-family: Roboto;
+  margin: 10px 10px 0 0;
+  -moz-box-sizing: border-box;
+  outline: none;
+}
+
+#pac-container {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  margin-right: 12px;
+}
+
+#pac-input {
+  background-color: #fff;
+  font-family: Roboto;
+  font-size: 15px;
+  font-weight: 300;
+  margin-left: 12px;
+  padding: 8px 11px 8px 13px;
+  text-overflow: ellipsis;
+  width: 400px;
+}
+
+#pac-input:focus {
+  border-color: #4d90fe;
+}
+
+#title {
+  color: #fff;
+  background-color: #acbcc9;
+  font-size: 18px;
+  font-weight: 400;
+  padding: 6px 12px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Styling for an info pane that slides out from the left. 
+     * Hidden by default. */
+#panel {
+  height: 100%;
+  background-color: white;
+  z-index: 1;
+  overflow-x: hidden;
+  transition: all 0.2s ease-out;
+}
+
+#panel ul {
+    list-style: none;
+}
+
+#panel ul li {
+    padding: 15px 15px 15px 55px;
+    background-image: url('https://image.flaticon.com/icons/png/512/1137/1137789.png');
+    background-repeat: no-repeat; 
+    background-position: 15px 35px;
+    background-size: 32px;
+}
+#panel ul li.active-loc {
+    background-color: #ccc;
+}
+#panel ul li a:link,
+#panel ul li a:visited {
+    text-decoration: none;
+    color: black;
+}
+#panel ul li a:active,
+#panel ul li a:hover {
+    text-decoration: underline;
+    color: black;
+}
+
+.open {
+  width: 250px;
+}
+
+.place {
+  font-family: "open sans", arial, sans-serif;
+  font-size: 1.2em;
+  font-weight: 500;
+  margin-block-end: 0px;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+.distanceText {
+  color: silver;
+  font-family: "open sans", arial, sans-serif;
+  font-size: 1em;
+  font-weight: 400;
+  margin-block-start: 0.25em;
+  padding-left: 18px;
+  padding-right: 18px;
+}
