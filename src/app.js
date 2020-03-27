@@ -14,6 +14,11 @@
  */
 
 // Style credit: https://snazzymaps.com/style/1/pale-dawn
+
+const initialLocation = "20176";
+const initialZoom = 6;
+const clickedZoom = 9;
+let markers = [];
 const mapStyle = [
   {
     featureType: "administrative",
@@ -107,7 +112,17 @@ const mapStyle = [
   }
 ];
 
+// map handler
 let map;
+
+// geocoder handler
+let  geocoder;
+
+//let dataSource = 'https://fmc-ag-drupal.k8s.stage.jellyfish.net/us/en/api/retailers';
+//let dataSource = './retailers.json';
+let dataSource = './retailers-geojson.json';
+//let dataSource = './stores.json';
+
 
 // Escapes HTML characters in a template literal string, to prevent XSS.
 // See https://www.owasp.org/index.php/XSS_%28Cross_Site_Scripting%29_Prevention_Cheat_Sheet#RULE_.231_-_HTML_Escape_Before_Inserting_Untrusted_Data_into_HTML_Element_Content
@@ -130,17 +145,23 @@ function sanitizeHTML(strings) {
 }
 
 
-
 function initMap() {
-  // Create the map.
+  geocoder = new google.maps.Geocoder();
+
+  // Create the map. zoom: 2.75,
   map = new google.maps.Map(document.getElementsByClassName("map")[0], {
-    zoom: 2.75,
     center: { lat: 51.5045771, lng: -0.08664599999997336 },
     styles: mapStyle
   });
 
+  setInitialMapCenterByZip(initialLocation);
+
   // Load the stores GeoJSON onto the map.
-  map.data.loadGeoJson("stores.json");
+  // map.data.loadGeoJson("stores.json");
+  // swtich to use getStores();
+  stores = getStores();
+  console.log('store data: ', stores);
+  map.data.loadGeoJson(dataSource);
 
   // Define the custom marker icons, using the store's "category".
   map.data.setStyle(feature => {
@@ -169,10 +190,6 @@ function initMap() {
     const image = event.feature.getProperty("image");
     const position = event.feature.getGeometry().get();
     const content = sanitizeHTML`
-      <!-- 
-      logo:
-      <img style="float:left; width:200px; margin-top:30px" src="img/logo.png"> 
-      -->
       <img src="${image}" alt="${name}" />
       <div style="margin-left:220px; margin-bottom:20px;">
         <h2>${name}</h2>
@@ -184,10 +201,6 @@ function initMap() {
           <strong>Email:</strong> ${email}
         </p>
         <a href="https://www.google.com/maps?saddr=My+Location&daddr=${position}" title="get directions to ${name}" target="_blank"><button>Get Directions</button></a>
-        <!-- 
-        streetview:
-        <p><img src="https://maps.googleapis.com/maps/api/streetview?size=350x120&location=${position.lat()},${position.lng()}&key=${apiKey}"></p>
-        -->
       </div>
     `;
 
@@ -209,9 +222,9 @@ function initMap() {
   const container = document.createElement("div");
   const input = document.createElement("input");
   const options = {
-    types: ["address"]
-    //,
-    //componentRestrictions: { country: "us" }
+    types: ["postal_code"] // changed this from "address" per https://developers.google.com/places/supported_types?hl=es#table3
+    ,
+    componentRestrictions: { country: "us" }
   };
 
   card.setAttribute("id", "pac-card");
@@ -221,7 +234,7 @@ function initMap() {
   container.setAttribute("id", "pac-container");
   input.setAttribute("id", "pac-input");
   input.setAttribute("type", "text");
-  input.setAttribute("placeholder", "Enter an address");
+  input.setAttribute("placeholder", "Enter a Zip / Postal Code");
   container.appendChild(input);
   card.appendChild(titleBar);
   card.appendChild(container);
@@ -230,50 +243,112 @@ function initMap() {
   // Make the search bar into a Places Autocomplete search bar and select
   // which detail fields should be returned about the place that
   // the user selects from the suggestions.
-  const autocomplete = new google.maps.places.Autocomplete(input, options);
+  // const autocomplete = new google.maps.places.Autocomplete(input, options);
+  const autocomplete = new google.maps.places.Autocomplete(input);
 
-  autocomplete.setFields(["address_components", "geometry", "name"]);
+  //autocomplete.setFields(["address_components", "geometry", "name"]);
+  //autocomplete.setFields(["address_components"]);
+  autocomplete.setFields(['postal_code']);
 
   // Set the origin point when the user selects an address
   const originMarker = new google.maps.Marker({ map: map });
+  console.log('originMarker: ', originMarker);
   originMarker.setVisible(false);
-  let originLocation = map.getCenter();
+  originLocation = map.getCenter();
 
   autocomplete.addListener("place_changed", async () => {
+    console.log('place_changed: in');
     originMarker.setVisible(false);
     originLocation = map.getCenter();
+    console.log('originLocation: ', originLocation);
+
     const place = autocomplete.getPlace();
 
+    console.log('place: ', place);
     if ( !place.geometry ) {
       // User entered the name of a Place that was not suggested and
       // pressed the Enter key, or the Place Details request failed.
-      window.alert("No address available for input: '" + place.name + "'");
-      return;
+      console.log('place name: ', place.name);
+      deleteMarkers();
+      setInitialMapCenterByZip(place.name);
+      //return;
     }
-
+    else {
+    // User entered a place with geometery  
     // Recenter the map to the selected address
-    originLocation = place.geometry.location;
-    map.setCenter(originLocation);
-    map.setZoom(9);
-    //console.log(place);
+      originLocation = place.geometry.location;
+      map.setCenter(originLocation);
+      map.setZoom(initialZoom);
+      //console.log(place);
 
-    originMarker.setPosition(originLocation);
-    originMarker.setVisible(true);
+      originMarker.setPosition(originLocation);
+      originMarker.setVisible(true);
+    }
 
     // Use the selected address as the origin to calculate distances
     // to each of the store locations
     // disabled this as the distance calc is a paid library...
-    // const rankedStores = await calculateDistances(map.data, originLocation);
-    // showStoresList(map.data, rankedStores);
-    //showStoresList(map.data);
+    const rankedStores = await calculateDistances(map.data, originLocation);
+    showFilteredStoresList(map.data, rankedStores);
+    // showStoresList(map.data);
   });
-  //console.log("markers: ", map);
+  console.log("markers: ", map);
 
+  // show the listing
   showStoresList(map);
   return;
 } //init map
 
+
+
+function showFilteredStoresList(data, stores) {
+  console.log('showFilteredStoresList: in');
+  if (stores.length == 0) {
+    console.log('empty stores');
+    return;
+  }
+
+  let panel = document.createElement('div');
+  // If the panel already exists, use it. Else, create it and add to the page.
+  if (document.getElementById('panel')) {
+    panel = document.getElementById('panel');
+    // If panel is already open, close it
+    if (panel.classList.contains('open')) {
+      panel.classList.remove('open');
+    }
+  } else {
+    panel.setAttribute('id', 'panel');
+    const body = document.body;
+    body.insertBefore(panel, body.childNodes[0]);
+  }
+
+
+  // Clear the previous details
+  while (panel.lastChild) {
+    panel.removeChild(panel.lastChild);
+  }
+
+  stores.forEach((store) => {
+    // Add store details with text formatting
+    const name = document.createElement('p');
+    name.classList.add('place');
+    const currentStore = data.getFeatureById(store.storeid);
+    name.textContent = currentStore.getProperty('name');
+    panel.appendChild(name);
+    const distanceText = document.createElement('p');
+    distanceText.classList.add('distanceText');
+    distanceText.textContent = store.distanceText;
+    panel.appendChild(distanceText);
+  });
+
+  // Open the panel
+  panel.classList.add('open');
+
+  return;
+}
+
 async function calculateDistances(data, origin) {
+  console.log('calculateDistances: ',data, origin);
   const stores = [];
   const destinations = [];
 
@@ -328,19 +403,65 @@ async function calculateDistances(data, origin) {
   return distancesList;
 } // calc distance
 
+/*** Custom Functions */
 
-function getStores() {
-  const data = fetch('./stores.json')
+// Sets the map on all markers in the array.
+function setMapOnAll(map) {
+  for (var i = 0; i < markers.length; i++) {
+    markers[i].setMap(map);
+  } 
+}
+// Removes the markers from the map, but keeps them in the array.
+function clearMarkers() {
+  setMapOnAll(null);
+}
+
+// Deletes all markers in the array by removing references to them.
+function deleteMarkers() {
+  clearMarkers();
+  markers = [];
+}
+//Call this wherever needed to actually handle the display
+function setInitialMapCenterByZip(zipCode) {
+
+  console.log("setInitialMapCenterByZip > zipCode: ", zipCode);
+  geocoder.geocode( { 'address': zipCode}, function(results, status) {
+    if (status == google.maps.GeocoderStatus.OK) {
+      //Got result, center the map and put it out there
+      map.setCenter(results[0].geometry.location);
+      var marker = new google.maps.Marker({
+          map: map,
+          position: results[0].geometry.location
+      });
+
+      markers.push(marker);
+      map.setZoom(initialZoom);
+      originMarker.setPosition(results[0].geometry.location);
+      originMarker.setVisible(true);
+    } else {
+      alert("Geocode was not successful for the following reason: " + status);
+    }
+  });
+} //setInitialMapCenterByZip
+
+
+async function getStores(dataSource) {
+  console.log("getStores > dataSource: ", dataSource);
+
+  const data = fetch(dataSource)
     .then((response) => {
       return response.json();
-    });
+    })
+    .catch(err => console.log(`Error: ${err}`));
 
     return data;
-}
+} //getStores
+
+
 async function showStoresList() {
 
   // console.log("in storelist: 1");
-  const storeOBJ = await getStores();
+  const storeOBJ = await getStores(dataSource);
   const storeList = storeOBJ.features;
   // console.log("storeList: ", storeList);  
   if( storeList.length > 0 ) {
@@ -370,6 +491,7 @@ async function showStoresList() {
           <a href="javascript: moveToLocation(${coords});scrollLocList('${loc}');">
           <h2 id="${loc}">${name}</h2>
           </a>
+          <p>${description}</p>
           <p>${address}</p>
           <p>
             <strong>Open:</strong> ${hours}<br/>
@@ -390,8 +512,9 @@ function moveToLocation(lng, lat){
   let latlng = new google.maps.LatLng(lat, lng);
   // using global variable:
   map.setCenter(latlng);
-  map.setZoom(8);
-}
+  map.setZoom(clickedZoom);
+} //moveToLocation
+
 function scrollLocList(loc) {
   //console.log("LOC: ", loc);
   let daClass = 'active-loc';
@@ -409,4 +532,4 @@ function scrollLocList(loc) {
     parentEl.classList.add(daClass);
   }
   el.scrollIntoView();
-}
+} //scrollLocList
