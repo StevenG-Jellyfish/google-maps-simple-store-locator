@@ -15,10 +15,12 @@
 
 // Style credit: https://snazzymaps.com/style/1/pale-dawn
 
-const initialLocation = "20176";
+const initialLocation = "20176"; //TODO: SG: Get initLoc from session var
 const initialZoom = 6;
 const clickedZoom = 9;
-let markers = [];
+const apiKey = "AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE";
+//TODO: SG: remove to env file - update to client key
+
 const mapStyle = [
   {
     featureType: "administrative",
@@ -112,16 +114,20 @@ const mapStyle = [
   }
 ];
 
-// map handler
-let map;
 
-// geocoder handler
-let  geocoder;
+// global handlers
+let originMarker = '';
+let autocomplete = '';
+let markers = [];
+let geocoder = '';
+let stores = [];
+let infoWindow = '';
 
+//TODO: SG: Pull data from API end-point
 //let dataSource = 'https://fmc-ag-drupal.k8s.stage.jellyfish.net/us/en/api/retailers';
 //let dataSource = './retailers.json';
-let dataSource = './retailers-geojson.json';
 //let dataSource = './stores.json';
+let dataSource = './retailers-geojson.json';
 
 
 // Escapes HTML characters in a template literal string, to prevent XSS.
@@ -146,22 +152,29 @@ function sanitizeHTML(strings) {
 
 
 function initMap() {
+  // Create the geocoder
   geocoder = new google.maps.Geocoder();
 
   // Create the map. zoom: 2.75,
-  map = new google.maps.Map(document.getElementsByClassName("map")[0], {
+  window.map = new google.maps.Map(document.getElementsByClassName("map")[0], {
     center: { lat: 51.5045771, lng: -0.08664599999997336 },
     styles: mapStyle
   });
 
+  // Create the InfoWindow
+  infoWindow = new google.maps.InfoWindow();
+
+  // (re)Set the map center 
   setInitialMapCenterByZip(initialLocation);
 
   // Load the stores GeoJSON onto the map.
-  // map.data.loadGeoJson("stores.json");
-  // swtich to use getStores();
-  stores = getStores();
-  console.log('store data: ', stores);
+  console.log('Init dataSource: ', dataSource);
   map.data.loadGeoJson(dataSource);
+
+  // TODO: SG: swtich to use getStores();
+  // map.data.loadGeoJson("stores.json");
+  // stores = getStores(dataSource);
+  // console.log('store data: ', stores);
 
   // Define the custom marker icons, using the store's "category".
   map.data.setStyle(feature => {
@@ -175,45 +188,8 @@ function initMap() {
     };
   });
 
-  const apiKey = "AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE";
-  const infoWindow = new google.maps.InfoWindow();
-
   // Show the information for a store when its marker is clicked.
-  map.data.addListener("click", event => {
-    const category = event.feature.getProperty("category");
-    const name = event.feature.getProperty("name");
-    const description = event.feature.getProperty("description");
-    const address = event.feature.getProperty("address");
-    const hours = event.feature.getProperty("hours");
-    const phone = event.feature.getProperty("phone");
-    const email = event.feature.getProperty("email");
-    const image = event.feature.getProperty("image");
-    const position = event.feature.getGeometry().get();
-    const content = sanitizeHTML`
-      <img src="${image}" alt="${name}" />
-      <div style="margin-left:220px; margin-bottom:20px;">
-        <h2>${name}</h2>
-        <p>${description}</p>
-        <p>${address}</p>
-        <p>
-          <strong>Open:</strong> ${hours}<br/>
-          <strong>Phone:</strong> ${phone}<br/>
-          <strong>Email:</strong> ${email}
-        </p>
-        <a href="https://www.google.com/maps?saddr=My+Location&daddr=${position}" title="get directions to ${name}" target="_blank"><button>Get Directions</button></a>
-      </div>
-    `;
-
-    infoWindow.setOptions({
-      pixelOffset: new google.maps.Size(0, -30)
-    });
-    infoWindow.setContent(content);
-    infoWindow.setPosition(position);
-    infoWindow.open(map);
-    let loc = name.split(",");
-    loc = loc[0].replace(" ","-"); 
-    scrollLocList(loc);
-  }); //click event listener
+  initClickAction();
 
   // Build and add the search bar
   const card = document.createElement("div");
@@ -225,7 +201,7 @@ function initMap() {
     types: ["postal_code"] // changed this from "address" per https://developers.google.com/places/supported_types?hl=es#table3
     ,
     componentRestrictions: { country: "us" }
-  };
+  }; //options
 
   card.setAttribute("id", "pac-card");
   title.setAttribute("id", "title");
@@ -244,14 +220,14 @@ function initMap() {
   // which detail fields should be returned about the place that
   // the user selects from the suggestions.
   // const autocomplete = new google.maps.places.Autocomplete(input, options);
-  const autocomplete = new google.maps.places.Autocomplete(input);
+  autocomplete = new google.maps.places.Autocomplete(input);
 
   //autocomplete.setFields(["address_components", "geometry", "name"]);
   //autocomplete.setFields(["address_components"]);
   autocomplete.setFields(['postal_code']);
 
   // Set the origin point when the user selects an address
-  const originMarker = new google.maps.Marker({ map: map });
+  originMarker = new google.maps.Marker({ map: map });
   console.log('originMarker: ', originMarker);
   originMarker.setVisible(false);
   originLocation = map.getCenter();
@@ -300,7 +276,7 @@ function initMap() {
 } //init map
 
 
-
+// show a filtered list of stores on zip/postal codes
 function showFilteredStoresList(data, stores) {
   console.log('showFilteredStoresList: in');
   if (stores.length == 0) {
@@ -403,6 +379,7 @@ async function calculateDistances(data, origin) {
   return distancesList;
 } // calc distance
 
+
 /*** Custom Functions */
 
 // Sets the map on all markers in the array.
@@ -410,17 +387,19 @@ function setMapOnAll(map) {
   for (var i = 0; i < markers.length; i++) {
     markers[i].setMap(map);
   } 
-}
+} //setMapOnAll()
+
 // Removes the markers from the map, but keeps them in the array.
 function clearMarkers() {
   setMapOnAll(null);
-}
+} //clearMarkers()
 
 // Deletes all markers in the array by removing references to them.
 function deleteMarkers() {
   clearMarkers();
   markers = [];
-}
+} //deleteMarkers()
+
 //Call this wherever needed to actually handle the display
 function setInitialMapCenterByZip(zipCode) {
 
@@ -428,14 +407,14 @@ function setInitialMapCenterByZip(zipCode) {
   geocoder.geocode( { 'address': zipCode}, function(results, status) {
     if (status == google.maps.GeocoderStatus.OK) {
       //Got result, center the map and put it out there
-      map.setCenter(results[0].geometry.location);
+      window.map.setCenter(results[0].geometry.location);
       var marker = new google.maps.Marker({
           map: map,
           position: results[0].geometry.location
       });
 
       markers.push(marker);
-      map.setZoom(initialZoom);
+      window.map.setZoom(initialZoom);
       originMarker.setPosition(results[0].geometry.location);
       originMarker.setVisible(true);
     } else {
@@ -443,7 +422,6 @@ function setInitialMapCenterByZip(zipCode) {
     }
   });
 } //setInitialMapCenterByZip
-
 
 async function getStores(dataSource) {
   console.log("getStores > dataSource: ", dataSource);
@@ -456,7 +434,6 @@ async function getStores(dataSource) {
 
     return data;
 } //getStores
-
 
 async function showStoresList() {
 
@@ -507,12 +484,13 @@ async function showStoresList() {
 } //showStoreList
 
 function moveToLocation(lng, lat){
-  // console.log("coords: ", lng, lat);
+  //console.log("moveToLocation>> coords: ", lng, lat);
+  //console.log("moveToLocation>> map: ", window.map);
 
   let latlng = new google.maps.LatLng(lat, lng);
   // using global variable:
-  map.setCenter(latlng);
-  map.setZoom(clickedZoom);
+  window.map.setCenter(latlng);
+  window.map.setZoom(clickedZoom);
 } //moveToLocation
 
 function scrollLocList(loc) {
@@ -533,3 +511,42 @@ function scrollLocList(loc) {
   }
   el.scrollIntoView();
 } //scrollLocList
+
+function initClickAction() {
+  // Show the information for a store when its marker is clicked.
+  window.map.data.addListener("click", event => {
+    // const category = event.feature.getProperty("category");
+    const name = event.feature.getProperty("name");
+    const description = event.feature.getProperty("description");
+    const address = event.feature.getProperty("address");
+    const hours = event.feature.getProperty("hours");
+    const phone = event.feature.getProperty("phone");
+    const email = event.feature.getProperty("email");
+    const image = event.feature.getProperty("image");
+    const position = event.feature.getGeometry().get();
+    const content = sanitizeHTML`
+      <img src="${image}" alt="${name}" />
+      <div style="margin-left:220px; margin-bottom:20px;">
+        <h2>${name}</h2>
+        <p>${description}</p>
+        <p>${address}</p>
+        <p>
+          <strong>Open:</strong> ${hours}<br/>
+          <strong>Phone:</strong> ${phone}<br/>
+          <strong>Email:</strong> ${email}
+        </p>
+        <a href="https://www.google.com/maps?saddr=My+Location&daddr=${position}" title="get directions to ${name}" target="_blank"><button>Get Directions</button></a>
+      </div>
+    `;
+
+    infoWindow.setOptions({
+      pixelOffset: new google.maps.Size(0, -30)
+    });
+    infoWindow.setContent(content);
+    infoWindow.setPosition(position);
+    infoWindow.open(map);
+    let loc = name.split(",");
+    loc = loc[0].replace(" ","-"); 
+    scrollLocList(loc);
+  }); //click event listener
+}
