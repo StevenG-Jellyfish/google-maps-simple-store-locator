@@ -18,8 +18,11 @@
 const initialLocation = "20176"; //TODO: SG: Get initLoc from session var
 const initialZoom = 6;
 const clickedZoom = 9;
-const apiKey = "AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE";
-//TODO: SG: remove to env file - update to client key
+const numItemsInList = 10;
+//AIzaSyCGGcH6Y860UJeAe0qvmrHWkUvSzbmd5e8
+//AIzaSyDBL0hwTap6JyImD777wT6fD9-ggo3V3kE
+const apiKey = "AIzaSyCGGcH6Y860UJeAe0qvmrHWkUvSzbmd5e8";
+//TODO: SG: remove api key to env file - update to client key
 
 const mapStyle = [
   {
@@ -114,46 +117,29 @@ const mapStyle = [
   }
 ];
 
-
 // global handlers
-let originMarker = '';
-let autocomplete = '';
+let originMarker = "";
+let autocomplete = "";
 let markers = [];
-let geocoder = '';
+let geocoder = "";
 let stores = [];
-let infoWindow = '';
+let rankedStores = [];
+let infoWindow = "";
 
 //TODO: SG: Pull data from API end-point
-//let dataSource = 'https://fmc-ag-drupal.k8s.stage.jellyfish.net/us/en/api/retailers';
+//let dataSource = 'https://fmc-ag-drupal.k8s.stage.jellyfish.net/us/en/api/retailers;
 //let dataSource = './retailers.json';
 //let dataSource = './stores.json';
-let dataSource = './retailers-geojson.json';
+//let dataSource = './retailers-geojson.json';
+let dataSource = "./views-retailers-geojson.json";
 
-
-// Escapes HTML characters in a template literal string, to prevent XSS.
-// See https://www.owasp.org/index.php/XSS_%28Cross_Site_Scripting%29_Prevention_Cheat_Sheet#RULE_.231_-_HTML_Escape_Before_Inserting_Untrusted_Data_into_HTML_Element_Content
-function sanitizeHTML(strings) {
-  const entities = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  };
-  let result = strings[0];
-  for ( let i = 1; i < arguments.length; i++ ) {
-    result += String(arguments[i]).replace(/[&<>'"]/g, char => {
-      return entities[char];
-    });
-    result += strings[i];
-  }
-  return result;
-}
-
-
+// initMap - Main Function - API Call-back function (in index.html)
 function initMap() {
   // Create the geocoder
   geocoder = new google.maps.Geocoder();
+
+  // Create the InfoWindow
+  infoWindow = new google.maps.InfoWindow();
 
   // Create the map. zoom: 2.75,
   window.map = new google.maps.Map(document.getElementsByClassName("map")[0], {
@@ -161,15 +147,18 @@ function initMap() {
     styles: mapStyle
   });
 
-  // Create the InfoWindow
-  infoWindow = new google.maps.InfoWindow();
-
-  // (re)Set the map center 
-  setInitialMapCenterByZip(initialLocation);
+  // (re)Set the map center
+  // NOTE: setMapCenterByZip(initialLocation);
+  setMapCenterByPlace(initialLocation);
 
   // Load the stores GeoJSON onto the map.
-  console.log('Init dataSource: ', dataSource);
-  map.data.loadGeoJson(dataSource);
+  console.log("initMap >> Init dataSource: ", dataSource);
+  map.data.loadGeoJson(dataSource, { idPropertyName: "storeid" });
+
+  //TODO: SG: filter the dataSource by distance - show top 5
+  //initRankedStores();
+  // Listing of stores
+  showStoresList();
 
   // TODO: SG: swtich to use getStores();
   // map.data.loadGeoJson("stores.json");
@@ -181,16 +170,81 @@ function initMap() {
     return {
       icon: {
         //url: `https://www.jellyfish.com/static/icons/jf-launcher-icon-2x.png?v=2.0.0`,
-        url: 'https://image.flaticon.com/icons/png/512/1137/1137789.png',
+        url: "https://image.flaticon.com/icons/png/512/1137/1137789.png",
         scaledSize: new google.maps.Size(32, 32),
-        animation: google.maps.Animation.DROP,
+        animation: google.maps.Animation.DROP
       }
     };
   });
 
-  // Show the information for a store when its marker is clicked.
-  initClickAction();
+  // Show the information for a store when its marker is clicked on the map.
+  // NOTE: initClickAction();
 
+  // Build and add the search bar to the map
+  // NOTE: initSearchActions();
+
+  console.log("initMap >> map: ", map);
+
+  //show the listing
+  //showStoresList(map);
+  //showFilteredStoresList(map.data, rankedStores);
+  console.log("initMap >> initialLocation: ", initialLocation);
+  //initRankedStores();
+} //initMap()
+
+const setMapCenterByPlace = initialLocation => {
+  var request = {
+    query: initialLocation,
+    fields: ["name", "geometry"]
+  };
+
+  service = new google.maps.places.PlacesService(map);
+
+  service.findPlaceFromQuery(request, function(results, status) {
+    if (status === google.maps.places.PlacesServiceStatus.OK) {
+      for (var i = 0; i < results.length; i++) {
+        createMarker(results[i]);
+      }
+
+      map.setCenter(results[0].geometry.location);
+    }
+  });
+}; //setMapCenterByPlace
+
+const createMarker = place => {
+  var marker = new google.maps.Marker({
+    map: map,
+    position: place.geometry.location
+  });
+
+  google.maps.event.addListener(marker, "click", function() {
+    infowindow.setContent(place.name);
+    infowindow.open(map, this);
+  });
+}; //createMarker
+const initRankedStores = async () => {
+  console.log("initRankedStores >> initialLocation: ", initialLocation);
+  try {
+    rankedStores = await calculateDistances(map.data, initialLocation);
+    console.log(
+      "initRankedStores > calculateDistances >> rankedStores: ",
+      rankedStores
+    );
+  } catch (err) {
+    console.log("initRankedStores err: ", err);
+  }
+  try {
+    await showFilteredStoresList(map.data, rankedStores);
+    console.log(
+      "initRankedStores > showFilteredStoresList >> rankedStores: ",
+      rankedStores
+    );
+  } catch (err) {
+    console.log("showFilteredStoresList err: ", err);
+  }
+}; //initRankedStores()
+
+const initSearchActions = async () => {
   // Build and add the search bar
   const card = document.createElement("div");
   const titleBar = document.createElement("div");
@@ -198,8 +252,7 @@ function initMap() {
   const container = document.createElement("div");
   const input = document.createElement("input");
   const options = {
-    types: ["postal_code"] // changed this from "address" per https://developers.google.com/places/supported_types?hl=es#table3
-    ,
+    types: ["postal_code"], // changed this from "address" per https://developers.google.com/places/supported_types?hl=es#table3
     componentRestrictions: { country: "us" }
   }; //options
 
@@ -210,6 +263,7 @@ function initMap() {
   container.setAttribute("id", "pac-container");
   input.setAttribute("id", "pac-input");
   input.setAttribute("type", "text");
+  input.setAttribute("default", initialLocation);
   input.setAttribute("placeholder", "Enter a Zip / Postal Code");
   container.appendChild(input);
   card.appendChild(titleBar);
@@ -224,113 +278,116 @@ function initMap() {
 
   //autocomplete.setFields(["address_components", "geometry", "name"]);
   //autocomplete.setFields(["address_components"]);
-  autocomplete.setFields(['postal_code']);
+  autocomplete.setFields(["name", "postal_code"]);
 
   // Set the origin point when the user selects an address
   originMarker = new google.maps.Marker({ map: map });
-  console.log('originMarker: ', originMarker);
+  console.log("originMarker: ", originMarker);
   originMarker.setVisible(false);
   originLocation = map.getCenter();
 
   autocomplete.addListener("place_changed", async () => {
-    console.log('place_changed: in');
+    console.log("place_changed: in");
     originMarker.setVisible(false);
     originLocation = map.getCenter();
-    console.log('originLocation: ', originLocation);
+    console.log("originLocation: ", originLocation);
 
     const place = autocomplete.getPlace();
 
-    console.log('place: ', place);
-    if ( !place.geometry ) {
+    console.log("place: ", place);
+    if (!place.geometry) {
       // User entered the name of a Place that was not suggested and
       // pressed the Enter key, or the Place Details request failed.
-      console.log('place name: ', place.name);
-      deleteMarkers();
-      setInitialMapCenterByZip(place.name);
-      //return;
-    }
-    else {
-    // User entered a place with geometery  
-    // Recenter the map to the selected address
+      // console.log('place name: ', place.name);
+      // deleteMarkers();
+      // setMapCenterByZip(place.name);
+      // console.log('originMarker: ', originMarker);
+      // rankedStores = await calculateDistances(map.data, originLocation);
+      // console.log('place name >> rankedStores: ', rankedStores);
+      // showFilteredStoresList(map.data, rankedStores);
+      window.alert("No address available for input: '" + place.name + "'");
+      return;
+    } else {
+      // User entered a place with geometery
+      // Recenter the map to the selected address
       originLocation = place.geometry.location;
-      map.setCenter(originLocation);
-      map.setZoom(initialZoom);
-      //console.log(place);
+      window.map.setCenter(originLocation);
+      window.map.setZoom(initialZoom);
+      console.log(place);
 
       originMarker.setPosition(originLocation);
       originMarker.setVisible(true);
+
+      rankedStores = await calculateDistances(map.data, originLocation);
+      showFilteredStoresList(map.data, rankedStores);
+      return;
     }
 
     // Use the selected address as the origin to calculate distances
     // to each of the store locations
     // disabled this as the distance calc is a paid library...
-    const rankedStores = await calculateDistances(map.data, originLocation);
-    showFilteredStoresList(map.data, rankedStores);
+    //rankedStores = await calculateDistances(map.data, originLocation);
+    //showFilteredStoresList(map.data, rankedStores);
     // showStoresList(map.data);
+
+    return;
   });
-  console.log("markers: ", map);
-
-  // show the listing
-  showStoresList(map);
-  return;
-} //init map
-
+}; // initSearchActions
 
 // show a filtered list of stores on zip/postal codes
-function showFilteredStoresList(data, stores) {
-  console.log('showFilteredStoresList: in');
+const showFilteredStoresList = async (data, stores) => {
+  console.log("showFilteredStoresList: in");
   if (stores.length == 0) {
-    console.log('empty stores');
+    console.log("empty stores");
     return;
   }
 
-  let panel = document.createElement('div');
+  console.log("showFilteredStoresList >> data/stores: ", data, stores);
+
+  let panel = document.createElement("div");
   // If the panel already exists, use it. Else, create it and add to the page.
-  if (document.getElementById('panel')) {
-    panel = document.getElementById('panel');
+  if (document.getElementById("panel")) {
+    panel = document.getElementById("panel");
     // If panel is already open, close it
-    if (panel.classList.contains('open')) {
-      panel.classList.remove('open');
+    if (panel.classList.contains("open")) {
+      panel.classList.remove("open");
     }
   } else {
-    panel.setAttribute('id', 'panel');
+    panel.setAttribute("id", "panel");
     const body = document.body;
     body.insertBefore(panel, body.childNodes[0]);
   }
-
 
   // Clear the previous details
   while (panel.lastChild) {
     panel.removeChild(panel.lastChild);
   }
 
-  stores.forEach((store) => {
+  stores.forEach(store => {
     // Add store details with text formatting
-    const name = document.createElement('p');
-    name.classList.add('place');
+    const name = document.createElement("p");
+    name.classList.add("place");
     const currentStore = data.getFeatureById(store.storeid);
-    name.textContent = currentStore.getProperty('name');
+    name.textContent = currentStore.getProperty("name");
     panel.appendChild(name);
-    const distanceText = document.createElement('p');
-    distanceText.classList.add('distanceText');
+    const distanceText = document.createElement("p");
+    distanceText.classList.add("distanceText");
     distanceText.textContent = store.distanceText;
     panel.appendChild(distanceText);
   });
 
   // Open the panel
-  panel.classList.add('open');
+  panel.classList.add("open");
 
   return;
-}
-
+}; //showFilteredStoresList
 async function calculateDistances(data, origin) {
-  console.log('calculateDistances: ',data, origin);
   const stores = [];
   const destinations = [];
 
   // Build parallel arrays for the store IDs and destinations
-  data.forEach((store) => {
-    const storeNum = store.getProperty('storeid');
+  data.forEach(store => {
+    const storeNum = store.getProperty("storeid");
     const storeLoc = store.getGeometry().get();
 
     stores.push(storeNum);
@@ -340,22 +397,22 @@ async function calculateDistances(data, origin) {
   // Retrieve the distances of each store from the origin
   // The returned list will be in the same order as the destinations list
   const service = new google.maps.DistanceMatrixService();
-  const getDistanceMatrix =
-    (service, parameters) => new Promise((resolve, reject) => {
+  const getDistanceMatrix = (service, parameters) =>
+    new Promise((resolve, reject) => {
       service.getDistanceMatrix(parameters, (response, status) => {
-        if ( status != google.maps.DistanceMatrixStatus.OK ) {
+        if (status != google.maps.DistanceMatrixStatus.OK) {
           reject(response);
         } else {
           const distances = [];
           const results = response.rows[0].elements;
-          for ( let j = 0; j < results.length; j++ ) {
+          for (let j = 0; j < results.length; j++) {
             const element = results[j];
             const distanceText = element.distance.text;
             const distanceVal = element.distance.value;
             const distanceObject = {
               storeid: stores[j],
               distanceText: distanceText,
-              distanceVal: distanceVal,
+              distanceVal: distanceVal
             };
             distances.push(distanceObject);
           }
@@ -368,8 +425,8 @@ async function calculateDistances(data, origin) {
   const distancesList = await getDistanceMatrix(service, {
     origins: [origin],
     destinations: destinations,
-    travelMode: 'DRIVING',
-    unitSystem: google.maps.UnitSystem.METRIC,
+    travelMode: "DRIVING",
+    unitSystem: google.maps.UnitSystem.METRIC
   });
 
   distancesList.sort((first, second) => {
@@ -377,40 +434,106 @@ async function calculateDistances(data, origin) {
   });
 
   return distancesList;
-} // calc distance
+}
 
+// const calculateDistances = async (data, origin) => {
+//   console.log('calculateDistances >> data, origin: ',data, origin);
+//   const stores = [];
+//   const destinations = [];
+//   let cntr = 0;
 
-/*** Custom Functions */
+//   // Build parallel arrays for the store IDs and destinations
+//   data.forEach((store) => {
+//     cntr++
+//     //console.log('calculateDistances >> each store: ', store);
+//     const storeNum = cntr;
+//     //console.log('calculateDistances >> each storeNum: ', storeNum);
+//     const storeLoc = store.getGeometry().get();
+//     //console.log('calculateDistances >> each storeLoc: ', storeLoc);
+
+//     stores.push(storeNum);
+//     destinations.push(storeLoc);
+//   });
+
+//   // Retrieve the distances of each store from the origin
+//   // The returned list will be in the same order as the destinations list
+//   const service = new google.maps.DistanceMatrixService();
+//   console.log('calculateDistances >> service: ', service);
+//   const parameters = "";
+//   const getDistanceMatrix = (service, parameters) => new Promise((resolve, reject) => {
+//       service.getDistanceMatrix(parameters, (response, status) => {
+//       console.log('calculateDistances >> service - response: ', response);
+//       console.log('calculateDistances >> service - responDistanceMatrixStatusse: ', google.maps.DistanceMatrixStatus.OK);
+//       console.log('calculateDistances >> service - status: ', status);
+//         if ( status != google.maps.DistanceMatrixStatus.OK ) {
+//           reject(response);
+//         } else {
+//           const distances = [];
+//           const results = response.rows[0].elements;
+//           for ( let j = 0; j < results.length; j++ ) {
+//             const element = results[j];
+//             const distanceText = element.distance.text;
+//             const distanceVal = element.distance.value;
+//             const distanceObject = {
+//               storeid: stores[j],
+//               distanceText: distanceText,
+//               distanceVal: distanceVal,
+//             };
+//             distances.push(distanceObject);
+//           }
+
+//           console.log('calculateDistances >> distances: ', distances);
+//           resolve(distances);
+//         }
+//       });
+//     });
+
+//   console.log('calculateDistances >> origin: ', origin);
+//   const distancesList = await getDistanceMatrix(service, {
+//     origins: [origin],
+//     destinations: destinations,
+//     travelMode: 'DRIVING',
+//     unitSystem: google.maps.UnitSystem.IMPERIAL,
+//   });
+
+//   distancesList.sort((first, second) => {
+//     return first.distanceVal - second.distanceVal;
+//   });
+
+//   console.log('calculateDistances >> distancesList: ', distancesList);
+
+//   return distancesList;
+// } // calc distance
 
 // Sets the map on all markers in the array.
-function setMapOnAll(map) {
+
+const setMapOnAll = map => {
   for (var i = 0; i < markers.length; i++) {
     markers[i].setMap(map);
-  } 
-} //setMapOnAll()
+  }
+}; //setMapOnAll
 
 // Removes the markers from the map, but keeps them in the array.
-function clearMarkers() {
+const clearMarkers = () => {
   setMapOnAll(null);
-} //clearMarkers()
+}; //clearMarkers
 
 // Deletes all markers in the array by removing references to them.
-function deleteMarkers() {
+const deleteMarkers = () => {
   clearMarkers();
   markers = [];
-} //deleteMarkers()
+}; //deleteMarkers
 
 //Call this wherever needed to actually handle the display
-function setInitialMapCenterByZip(zipCode) {
-
-  console.log("setInitialMapCenterByZip > zipCode: ", zipCode);
-  geocoder.geocode( { 'address': zipCode}, function(results, status) {
+const setMapCenterByZip = zipCode => {
+  console.log("setMapCenterByZip > zipCode: ", zipCode);
+  geocoder.geocode({ address: zipCode }, function(results, status) {
     if (status == google.maps.GeocoderStatus.OK) {
       //Got result, center the map and put it out there
       window.map.setCenter(results[0].geometry.location);
       var marker = new google.maps.Marker({
-          map: map,
-          position: results[0].geometry.location
+        map: map,
+        position: results[0].geometry.location
       });
 
       markers.push(marker);
@@ -421,31 +544,33 @@ function setInitialMapCenterByZip(zipCode) {
       alert("Geocode was not successful for the following reason: " + status);
     }
   });
-} //setInitialMapCenterByZip
+}; //setMapCenterByZip
 
-async function getStores(dataSource) {
+const getStores = async dataSource => {
   console.log("getStores > dataSource: ", dataSource);
 
   const data = fetch(dataSource)
-    .then((response) => {
+    .then(response => {
       return response.json();
     })
     .catch(err => console.log(`Error: ${err}`));
 
-    return data;
-} //getStores
+  return data;
+}; //getStores
 
-async function showStoresList() {
+const filterStoreList = async dataSource => {
+  console.log("getStores > dataSource: ", dataSource);
+}; //filterStoreList
 
+const showStoresList = async () => {
   // console.log("in storelist: 1");
   const storeOBJ = await getStores(dataSource);
   const storeList = storeOBJ.features;
-  // console.log("storeList: ", storeList);  
-  if( storeList.length > 0 ) {
-    let node = document.createElement("UL");   
+  // console.log("storeList: ", storeList);
+  if (storeList.length > 0) {
+    let node = document.createElement("UL");
 
-    for( store in storeList ) {
-
+    for (store in storeList) {
       //console.log("store: ", store);
       const properties = storeList[store].properties;
 
@@ -460,10 +585,10 @@ async function showStoresList() {
       //const position = event.feature.getGeometry().get();
 
       let loc = name.split(",");
-      loc = loc[0].replace(" ","-"); 
+      loc = loc[0].replace(" ", "-");
       //console.log("LOC: ", loc);
 
-      let daContent = document.createElement("li");  ;
+      let daContent = document.createElement("li");
       let daText = sanitizeHTML`
           <a href="javascript: moveToLocation(${coords});scrollLocList('${loc}');">
           <h2 id="${loc}">${name}</h2>
@@ -476,14 +601,14 @@ async function showStoresList() {
             <strong>Email:</strong> ${email}
           </p>
       `;
-      daContent.innerHTML = daText;    
-      node.appendChild(daContent);  
+      daContent.innerHTML = daText;
+      node.appendChild(daContent);
     } // for
-    document.getElementById("panel").appendChild(node); 
+    document.getElementById("panel").appendChild(node);
   } // if
-} //showStoreList
+}; //showStoreList
 
-function moveToLocation(lng, lat){
+const moveToLocation = (lng, lat) => {
   //console.log("moveToLocation>> coords: ", lng, lat);
   //console.log("moveToLocation>> map: ", window.map);
 
@@ -491,28 +616,28 @@ function moveToLocation(lng, lat){
   // using global variable:
   window.map.setCenter(latlng);
   window.map.setZoom(clickedZoom);
-} //moveToLocation
+}; //moveToLocation
 
-function scrollLocList(loc) {
-  //console.log("LOC: ", loc);
-  let daClass = 'active-loc';
+const scrollLocList = loc => {
+  console.log("scrollLocList loc: ", loc);
+  let daClass = "active-loc";
   let listItems = document.getElementsByClassName(daClass);
 
   // turn em all off
-  for ( i = 0; i < listItems.length; i++ ) {
+  for (i = 0; i < listItems.length; i++) {
     listItems[i].classList.remove(daClass);
   }
 
   //highlight clicked
   let el = document.getElementById(loc);
   let parentEl = el.parentNode.parentNode;
-  if ( !parentEl.classList.contains(daClass) ) {
+  if (!parentEl.classList.contains(daClass)) {
     parentEl.classList.add(daClass);
   }
   el.scrollIntoView();
-} //scrollLocList
+}; //scrollLocList
 
-function initClickAction() {
+const initClickAction = async () => {
   // Show the information for a store when its marker is clicked.
   window.map.data.addListener("click", event => {
     // const category = event.feature.getProperty("category");
@@ -524,20 +649,20 @@ function initClickAction() {
     const email = event.feature.getProperty("email");
     const image = event.feature.getProperty("image");
     const position = event.feature.getGeometry().get();
+
     const content = sanitizeHTML`
-      <img src="${image}" alt="${name}" />
-      <div style="margin-left:220px; margin-bottom:20px;">
-        <h2>${name}</h2>
-        <p>${description}</p>
-        <p>${address}</p>
-        <p>
-          <strong>Open:</strong> ${hours}<br/>
-          <strong>Phone:</strong> ${phone}<br/>
-          <strong>Email:</strong> ${email}
-        </p>
-        <a href="https://www.google.com/maps?saddr=My+Location&daddr=${position}" title="get directions to ${name}" target="_blank"><button>Get Directions</button></a>
-      </div>
-    `;
+    <div style="margin-left:220px; margin-bottom:20px;">
+      <h2>${name}</h2>
+      <p>${description}</p>
+      <p>${address}</p>
+      <p>
+        <strong>Open:</strong> ${hours}<br/>
+        <strong>Phone:</strong> ${phone}<br/>
+        <strong>Email:</strong> ${email}
+      </p>
+      <a href="https://www.google.com/maps?saddr=My+Location&daddr=${position}" title="get directions to ${name}" target="_blank"><button>Get Directions</button></a>
+    </div>
+  `;
 
     infoWindow.setOptions({
       pixelOffset: new google.maps.Size(0, -30)
@@ -546,7 +671,27 @@ function initClickAction() {
     infoWindow.setPosition(position);
     infoWindow.open(map);
     let loc = name.split(",");
-    loc = loc[0].replace(" ","-"); 
+    loc = loc[0].replace(" ", "-");
     scrollLocList(loc);
   }); //click event listener
+}; //initClickAction
+
+// Escapes HTML characters in a template literal string, to prevent XSS.
+// See https://www.owasp.org/index.php/XSS_%28Cross_Site_Scripting%29_Prevention_Cheat_Sheet#RULE_.231_-_HTML_Escape_Before_Inserting_Untrusted_Data_into_HTML_Element_Content
+function sanitizeHTML(strings) {
+  const entities = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  };
+  let result = strings[0];
+  for (let i = 1; i < arguments.length; i++) {
+    result += String(arguments[i]).replace(/[&<>'"]/g, char => {
+      return entities[char];
+    });
+    result += strings[i];
+  }
+  return result;
 }
